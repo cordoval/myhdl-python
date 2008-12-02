@@ -1,7 +1,7 @@
 #  This file is part of the myhdl library, a Python package for using
 #  Python as a Hardware Description Language.
 #
-#  Copyright (C) 2003 Jan Decaluwe
+#  Copyright (C) 2003-2008 Jan Decaluwe
 #
 #  The myhdl library is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Lesser General Public License as
@@ -21,9 +21,6 @@
 
 """
 
-__author__ = "Jan Decaluwe <jan@jandecaluwe.com>"
-__revision__ = "$Revision$"
-__date__ = "$Date$"
 
 import sys
 import os
@@ -577,7 +574,7 @@ class _ConvertVisitor(_ConversionMixin):
 
     def visitCallFunc(self, node, *args):
         fn = node.node
-        assert isinstance(fn, astNode.Name)
+        # assert isinstance(fn, astNode.Name)
         f = self.getObj(fn)
         opening, closing = '(', ')'
         if f is bool:
@@ -611,6 +608,14 @@ class _ConvertVisitor(_ConversionMixin):
         elif f is intbv:
             self.visit(node.args[0])
             return
+        elif f == intbv.signed: # note equality comparison
+            # comes from a getattr
+            opening, closing = '', ''
+            if not fn.expr.signed:
+                opening, closing = "$signed(", ")"
+            self.write(opening)
+            self.visit(fn.expr)
+            self.write(closing)
         elif type(f) in (ClassType, TypeType) and issubclass(f, Exception):
             self.write(f.__name__)
         elif f in (posedge, negedge):
@@ -840,9 +845,9 @@ class _ConvertVisitor(_ConversionMixin):
         isMixedExpr = (not node.signed) and (context == _context.SIGNED)
         n = node.name
         if n == 'False':
-            s = "0"
+            s = "1'b0"
         elif n == 'True':
-            s = "1"
+            s = "1'b1"
         elif n in self.ast.vardict:
             addSignBit = isMixedExpr
             s = n

@@ -1,7 +1,7 @@
 #  This file is part of the myhdl library, a Python package for using
 #  Python as a Hardware Description Language.
 #
-#  Copyright (C) 2003 Jan Decaluwe
+#  Copyright (C) 2003-2008 Jan Decaluwe
 #
 #  The myhdl library is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Lesser General Public License as
@@ -21,9 +21,6 @@
 
 """
 
-__author__ = "Jan Decaluwe <jan@jandecaluwe.com>"
-__revision__ = "$Revision$"
-__date__ = "$Date$"
 
 import inspect
 import compiler
@@ -247,7 +244,7 @@ class _NotSupportedVisitor(_ConversionMixin):
             self.raiseError(node, _error.NotSupported, "extra positional arguments")
         if node.dstar_args:
             self.raiseError(node, _error.NotSupported, "extra named arguments")
-        f = eval(_unparse(node.node), self.ast.symdict)
+        # f = eval(_unparse(node.node), self.ast.symdict)
         self.visitChildNodes(node)
                 
     def visitCompare(self, node, *args):
@@ -328,7 +325,7 @@ class _Rom(object):
         self.rom = rom
 
 
-def _isNegative(obj):
+def _maybeNegative(obj):
     if hasattr(obj, '_min') and (obj._min is not None) and (obj._min < 0):
         return True
     if isinstance(obj, (int, long)) and obj < 0:
@@ -502,6 +499,8 @@ class _AnalyzeVisitor(_ConversionMixin):
         node.signed = False
         if type(f) is type and issubclass(f, intbv):
             node.obj = self.getVal(node)
+        elif f is concat:
+            node.obj = self.getVal(node)
         elif f is len:
             node.obj = int(0) # XXX
         elif f is bool:
@@ -512,6 +511,10 @@ class _AnalyzeVisitor(_ConversionMixin):
 ##             node.obj = _EdgeDetector()
         elif f is delay:
             node.obj = delay(0)
+        ### suprize: identity comparison on unbound methods doesn't work in python 2.5??
+        elif f == intbv.signed:
+            node.obj = int(-1)
+            node.signed = True
         elif f in myhdlObjects:
             pass
         elif f in builtinObjects:
@@ -627,16 +630,13 @@ class _AnalyzeVisitor(_ConversionMixin):
            
     def visitGetattr(self, node, *args):
         self.visit(node.expr, *args)
-        assert isinstance(node.expr, astNode.Name)
         node.obj = None
         node.signed = False
-        n = node.expr.name
-        if n in self.ast.vardict:
-            obj = self.ast.vardict[n]
-        elif n in self.ast.symdict:
-            obj = self.ast.symdict[n]
-        else:
-            raise AssertionError("attribute target: %s" % n)
+        if isinstance(node.expr, astNode.Name):
+            n = node.expr.name
+            if (n not in self.ast.vardict) and (n not in self.ast.symdict):
+                raise AssertionError("attribute target: %s" % n)
+        obj = node.expr.obj
         if isinstance(obj, Signal):
             if node.attrname == 'posedge':
                 node.obj = obj.posedge
@@ -649,6 +649,8 @@ class _AnalyzeVisitor(_ConversionMixin):
                 node.obj = obj.min
             elif node.attrname == 'max':
                 node.obj = obj.max
+            elif node.attrname == 'signed':
+                node.obj = intbv.signed
         if isinstance(obj, EnumType):
             assert hasattr(obj, node.attrname)
             node.obj = getattr(obj, node.attrname)
@@ -758,7 +760,7 @@ class _AnalyzeVisitor(_ConversionMixin):
             node.obj = __builtin__.__dict__[n]
         else:
             pass
-        node.signed = _isNegative(node.obj)
+        node.signed = _maybeNegative(node.obj)
 ##         node.target = node.obj
 
     def visitReturn(self, node, *args):
@@ -857,7 +859,7 @@ class _AnalyzeVisitor(_ConversionMixin):
             node.obj = bool()
         else:
             node.obj = bool() # XXX default
-        node.signed = _isNegative(node.obj)
+        node.signed = _maybeNegative(node.obj)
 
     def visitTuple(self, node, *args):
         node.signed = False
