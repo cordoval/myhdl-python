@@ -1,7 +1,7 @@
 #  This file is part of the myhdl library, a Python package for using
 #  Python as a Hardware Description Language.
 #
-#  Copyright (C) 2003-2008 Jan Decaluwe
+#  Copyright (C) 2003-2009 Jan Decaluwe
 #
 #  The myhdl library is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Lesser General Public License as
@@ -27,9 +27,9 @@ import sys
 import inspect
 import re
 from types import FunctionType, GeneratorType, ListType, TupleType
-import compiler
-# hope this will always work ...
-from compiler.consts import CO_GENERATOR
+
+from tokenize import generate_tokens, untokenize, INDENT
+from cStringIO import StringIO
 
 
 def _printExcInfo():
@@ -40,10 +40,7 @@ def _printExcInfo():
         msg += ": %s" % value
         print >> sys.stderr, msg
 
-def _isGenFunc(obj):
-    if isinstance(obj, FunctionType):
-        return bool(obj.func_code.co_flags & CO_GENERATOR)
-    return bool(0)
+_isGenFunc = inspect.isgeneratorfunction
 
 def _flatten(*args):
     arglist = []
@@ -62,3 +59,16 @@ def _isTupleOfInts(obj):
         if not isinstance(e, (int, long)):
             return False
     return True
+
+def _dedent(s):
+    """Dedent python code string."""
+
+    result = [t[:2] for t in generate_tokens(StringIO(s).readline)]
+    # set initial indent to 0 if any
+    if result[0][0] == INDENT:
+        result[0] = (INDENT, '')
+    return untokenize(result)
+    
+
+
+    
