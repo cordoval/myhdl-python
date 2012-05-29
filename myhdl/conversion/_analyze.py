@@ -150,7 +150,7 @@ def _analyzeGens(top, absnames):
             s = inspect.getsource(f)
             s = _dedent(s)
             tree = ast.parse(s)
-            # print ast.dump(tree)
+            #print ast.dump(tree)
             tree.sourcefile  = inspect.getsourcefile(f)
             tree.lineoffset = inspect.getsourcelines(f)[1]-1
             tree.symdict = f.func_globals.copy()
@@ -466,6 +466,14 @@ class _AnalyzeVisitor(ast.NodeVisitor, _ConversionMixin):
             self.setAttr(node)
         else:
             self.getAttr(node)
+        if node.attr == 'next':
+            if isinstance(node.value, ast.Name):
+                n = node.value.id
+                obj = node.value.obj
+                if isinstance(obj, _Signal) and isinstance(obj._init, modbv):
+                    if not obj._init._hasFullRange():
+                        self.raiseError(node, _error.ModbvRange, n)
+         
  
     def setAttr(self, node):
         if node.attr != 'next':
@@ -531,6 +539,9 @@ class _AnalyzeVisitor(ast.NodeVisitor, _ConversionMixin):
                     self.raiseError(node, _error.IntbvBitWidth, n)
                     if obj._min < 0:
                         _signed = True
+            if isinstance(obj, modbv):
+                if not obj._hasFullRange():
+                    self.raiseError(node, _error.ModbvRange, n)
             if n in self.tree.vardict:
                 curObj = self.tree.vardict[n]
                 if isinstance(obj, type(curObj)):
