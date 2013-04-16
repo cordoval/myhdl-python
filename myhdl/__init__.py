@@ -32,6 +32,7 @@ posedge -- callable to model a rising edge on a signal in a yield statement
 negedge -- callable to model a falling edge on a signal in a yield statement
 join -- callable to join clauses in a yield statement
 intbv -- mutable integer class with bit vector facilities
+modbv -- modular bit vector class
 downrange -- function that returns a downward range
 bin -- returns a binary string representation.
        The optional width specifies the desired string
@@ -39,14 +40,17 @@ bin -- returns a binary string representation.
 concat -- function to concat ints, bitstrings, bools, intbvs, Signals
        -- returns an intbv
 instances -- function that returns all instances defined in a function
-always_comb -- function that returns an input-sensitive generator
+always -- 
+always_comb -- decorator that returns an input-sensitive generator
+always_seq --
+ResetSignal --
 enum -- function that returns an enumeration type
 traceSignals -- function that enables signal tracing in a VCD file
 toVerilog -- function that converts a design to Verilog
 
 """
 
-__version__ = "0.7"
+__version__ = "0.8dev"
 
 import sys
 import warnings
@@ -110,6 +114,7 @@ warnings.showwarning = showwarning
 from _bin import bin
 from _concat import concat
 from _intbv import intbv
+from _modbv import modbv
 from _join import join
 from _Signal import posedge, negedge, Signal, SignalType
 from _ShadowSignal import ConcatSignal
@@ -120,6 +125,7 @@ from _Cosimulation import Cosimulation
 from _Simulation import Simulation
 from _misc import instances, downrange
 from _always_comb import always_comb
+from _always_seq import always_seq, ResetSignal
 from _always import always
 from _instance import instance
 from _enum import enum, EnumType, EnumItemType
@@ -135,6 +141,7 @@ from _tristate import Tristate
 __all__ = ["bin",
            "concat",
            "intbv",
+           "modbv",
            "join",
            "posedge",
            "negedge",
@@ -151,6 +158,8 @@ __all__ = ["bin",
            "instances",
            "instance",
            "always_comb",
+           "always_seq",
+           "ResetSignal",
            "always",
            "enum",
            "EnumType",
